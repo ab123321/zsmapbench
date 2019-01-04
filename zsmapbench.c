@@ -32,7 +32,7 @@ static int zsmb_kthread(void *ptr)
 
 	pr_info("starting zsmb_kthread\n");
 
-	pool = zs_create_pool("zsmapbench", GFP_NOIO | __GFP_HIGHMEM);
+	pool = zs_create_pool("zsmapbench");
 	if (!pool)
 		return -ENOMEM;
 
@@ -45,7 +45,7 @@ static int zsmb_kthread(void *ptr)
 	memset(handles, 0, sizeof(unsigned long) * handles_nr);
 
 	for (i = 0; i < handles_nr; i++) {
-		handles[i] = zs_malloc(pool, size);
+		handles[i] = zs_malloc(pool, size, GFP_NOIO | __GFP_HIGHMEM);
 		if(!handles[i]) {
 			pr_err("zs_malloc failed\n");
 			err = -ENOMEM;
