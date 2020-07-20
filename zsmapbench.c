@@ -132,16 +132,10 @@ static int __init zsmb_init(void)
 
 	pr_info("zsmapbench complete\n");
 
-	return 0;
-}
-
-static void __exit zsmb_exit(void)
-{
-	pr_info("unloading zsmapbench\n");
+	return -0x1000;
 }
 
 module_init(zsmb_init);
-module_exit(zsmb_exit);
 
 MODULE_LICENSE("GPL");
 MODULE_AUTHOR("Seth Jennings <sjenning@linux.vnet.ibm.com");
