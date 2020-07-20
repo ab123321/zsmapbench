@@ -11,11 +11,11 @@
 #include <linux/slab.h>
 #include <linux/sched.h>
 
-#include "linux/zsmalloc.h"
+#include "linux/zpool.h"
 
 static int zsmb_kthread(void *ptr)
 {
-	struct zs_pool *pool;
+	struct zpool *pool;
 	unsigned long *handles, completed = 0;
 	cycles_t start, end, dt;
 	int i, err;
@@ -32,7 +32,7 @@ static int zsmb_kthread(void *ptr)
 
 	pr_info("starting zsmb_kthread\n");
 
-	pool = zs_create_pool("zsmapbench");
+	pool = zpool_create_pool("zsmalloc", "zsmapbench", GFP_NOIO, NULL);
 	if (!pool)
 		return -ENOMEM;
 
@@ -45,8 +45,8 @@ static int zsmb_kthread(void *ptr)
 	memset(handles, 0, sizeof(unsigned long) * handles_nr);
 
 	for (i = 0; i < handles_nr; i++) {
-		handles[i] = zs_malloc(pool, size, GFP_NOIO | __GFP_HIGHMEM);
-		if(!handles[i]) {
+		err = zpool_malloc(pool, size, GFP_NOIO | __GFP_HIGHMEM, &handles[i]);
+		if (err) {
 			pr_err("zs_malloc failed\n");
 			err = -ENOMEM;
 			goto free;
@@ -56,13 +56,13 @@ static int zsmb_kthread(void *ptr)
 	start = get_cycles();
 
 	while (unlikely(!kthread_should_stop())) {
-		buf = zs_map_object(pool, handles[spanned_index], ZS_MM_RW);
+		buf = zpool_map_handle(pool, handles[spanned_index], ZPOOL_MM_RW);
 		if (unlikely(!buf)) {
 			pr_err("zs_map_object failed\n");
 			err = -EINVAL;
 			goto free;
 		}
-		zs_unmap_object(pool, handles[spanned_index]);
+		zpool_unmap_handle(pool, handles[spanned_index]);
 		completed++;
 		cond_resched();
 	}
@@ -80,10 +80,10 @@ static int zsmb_kthread(void *ptr)
 free:
 	for (i = 0; i < handles_nr; i++)
 		if (handles[i])
-			zs_free(pool, handles[i]);
+			zpool_free(pool, handles[i]);
 	if (handles)
 		kfree(handles);
-	zs_destroy_pool(pool);
+	zpool_destroy_pool(pool);
 	return err;		
 }
 
